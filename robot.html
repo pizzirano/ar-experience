@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AR – Teste de Animações GLB</title>
+
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+    <style>
+      .btns {
+        position: fixed;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 12px;
+        z-index: 999;
+      }
+
+      button {
+        width: 40px;
+        height: 40px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: white;
+        font-size: 22px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      button:active {
+        transform: scale(0.9);
+      }
+    </style>
+
+    <script>
+      AFRAME.registerComponent("animation-tester", {
+        init: function () {
+          const marker = this.el;
+          const modelEl = marker.querySelector("[animation-mixer]");
+          const hud = document.getElementById("hud");
+
+          let clips = [];
+          let index = 0;
+          let loaded = false;
+
+          function updateHUD() {
+            hud.innerText = `🎬 ${clips[index] || "Carregando..."}`;
+          }
+
+          modelEl.addEventListener("model-loaded", (e) => {
+            const model = e.detail.model;
+            clips = model.animations.map((a) => a.name);
+            loaded = true;
+
+            console.log("🎞️ Animações:", clips);
+
+            modelEl.setAttribute("animation-mixer", {
+              clip: clips[index],
+              loop: "once",
+              timeScale: 0,
+            });
+
+            updateHUD();
+          });
+
+          marker.addEventListener("markerFound", () => {
+            if (!loaded) return;
+            modelEl.setAttribute("animation-mixer", "timeScale: 1");
+          });
+
+          marker.addEventListener("markerLost", () => {
+            modelEl.setAttribute("animation-mixer", "timeScale: 0");
+          });
+
+          window.nextAnim = () => {
+            if (!loaded) return;
+            index = (index + 1) % clips.length;
+            modelEl.setAttribute("animation-mixer", {
+              clip: clips[index],
+              loop: "once",
+              timeScale: 1,
+            });
+            updateHUD();
+          };
+
+          window.prevAnim = () => {
+            if (!loaded) return;
+            index = (index - 1 + clips.length) % clips.length;
+            modelEl.setAttribute("animation-mixer", {
+              clip: clips[index],
+              loop: "once",
+              timeScale: 1,
+            });
+            updateHUD();
+          };
+        },
+      });
+    </script>
+  </head>
+
+  <body style="margin: 0; overflow: hidden">
+    <!-- HUD -->
+    <div id="hud">🎬 Carregando...</div>
+
+    <!-- Botões -->
+    <div class="btns">
+      <button onclick="prevAnim()">⏮</button>
+      <button onclick="nextAnim()">⏭</button>
+    </div>
+
+    <a-scene embedded arjs="sourceType: webcam;">
+      <a-assets>
+        <a-asset-item id="robot" src="models/robot.glb"></a-asset-item>
+      </a-assets>
+
+      <a-marker preset="hiro" animation-tester>
+        <a-entity
+          gltf-model="#robot"
+          scale="1 1 1"
+          position="0 0 0"
+          animation-mixer
+        ></a-entity>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
